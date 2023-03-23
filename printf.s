@@ -3,19 +3,22 @@ jump_table:             ; starts with %b with binary
     dq Binary           ; %b - bin 
     dq Char             ; %c - Char
     dq Decimal          ; %d - decimal 
-    times ('o' - 'd' + 1) dq Error ; nothing here
+    times ('o' - 'd' - 1) dq Error ; nothing here
     dq Oct              ; %o - octal
-    times ('s' - 'o' + 1) dq Error  ; nothing here
-    dq String 
-    times ('x' - 's' + 1) dq Error
-    dq Hex
+    times ('s' - 'o' - 1) dq Error  ; nothing here
+    dq String           ; %s - string
+    times ('x' - 's' - 1) dq Error
+    dq Hex              ; %x - hex
 
-hex: db 30h
+ascii: db 30h
+numbers_end_9: db 39h
+to_letters: db 7d
 
 section .data
 to_print_or_not_to_print: db 0
 Message: times 34 db 0
-hui: db 'hui%b'
+hui: db 'hui %b %o %x'
+     db 0
 
 
 section .text
@@ -24,7 +27,9 @@ global _start
 
 _start:
         mov rdi, hui
-        mov rsi, 5
+        mov rsi, 16
+        mov rdx, 16
+        mov rcx, 16
         pop r15             ; I don't know how many parametrs I have, but in the top of stack we have ret adr, save it
         ; 7 - ? args already in stack 
         push r9 
@@ -43,12 +48,12 @@ _start:
         call Main
 
         pop rbp
-        push rdi
-        push rsi
-        push rdx
-        push rcx
-        push r8
-        push r9
+        pop rdi
+        pop rsi
+        pop rdx
+        pop rcx
+        pop r8
+        pop r9
 
         push r15            ; push and return
         ret
@@ -144,11 +149,12 @@ Clean_Msg:
 
 
 ;--------------------------------------------------
-; prints num in binary
+; prints num in 2, 8, 16 count system
 ;--------------------------------------------------
-; 
+; Entry: rdi - 1 if binary, 3 if oct, 8 if hex 
+; Expects: rbp as a pointer to args
 ;--------------------------------------------------
-Binary:
+Print_2_8_16:
         push rax    
         push rbx    
         push rcx    
@@ -161,17 +167,48 @@ Binary:
 
         mov rsi, Message
 
-        mov rcx, 64d
         xor rdx, rdx ; use rdx as byte counter
         xor rbx, rbx ; use rbx as reg to save 0 or zero
+        cmp rdi, 1
+        jne .not_bin
+        mov rcx, 64d
+        jmp .zaloopa
 
-    .zaloopa:
+    .not_bin:
+        cmp rdi, 3
+        jne .not_oct
+        mov rcx, 21
         push rax
         xor al, al
         rol rax, 1
         mov bl, al
         pop rax
-        rol rax, 1
+        rol rax, 1                              ;copypast of algorithm to make 64 dividable for 3
+        cmp bl, 0
+        jne .skip_skip0  
+        cmp byte [to_print_or_not_to_print], 0
+        je .zaloopa
+    .skip_skip0:
+        add bl, byte [ascii]
+        mov byte [rsi], bl
+        inc rsi
+        inc rdx
+        mov byte [to_print_or_not_to_print], 1
+        jmp .zaloopa
+    
+    .not_oct:
+        mov rcx, 8d
+
+    .zaloopa:
+        push rcx
+        mov rcx, rdi
+        push rax
+        xor al, al
+        rol rax, cl
+        mov bl, al
+        pop rax
+        rol rax, cl
+        pop rcx
         ;shl bx, 1
         cmp bl, 0
         jne .skip_skip1  
@@ -180,10 +217,14 @@ Binary:
         je .skip_write_1
 
     .skip_skip1:
-        add bl, byte [hex]
+        add bl, byte [ascii]
+        cmp bl, byte [numbers_end_9]
+        jbe .no_hex_problem
+        add bl, byte [to_letters]
         ;push rbx
         ;push rax
         ;xor bl, bl
+    .no_hex_problem:
         mov byte [rsi], bl
         ;pop rax
         ;pop rbx
@@ -236,9 +277,31 @@ Binary:
         pop rax
         ret
 
+
+Binary:
+        push rdi
+        mov rdi, 1
+        call Print_2_8_16
+        pop rdi
+        ret
+
+
 Char:
 Decimal:
-Error:
+
+
 Oct:
+        push rdi
+        mov rdi, 3
+        call Print_2_8_16
+        pop rdi
+        ret
 String:
 Hex:
+        push rdi
+        mov rdi, 8
+        call Print_2_8_16
+        pop rdi
+        ret
+
+Error:
