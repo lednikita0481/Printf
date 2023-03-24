@@ -1,14 +1,14 @@
 section .rodata
 jump_table:             ; starts with %b with binary
-    dq Binary           ; %b - bin 
-    dq Char             ; %c - Char
-    dq Decimal          ; %d - decimal 
-    times ('o' - 'd' - 1) dq Error ; nothing here
-    dq Oct              ; %o - octal
+    dq Binary           ; %b - bin                               DONE
+    dq Char             ; %c - Char                              DONE
+    dq Decimal          ; %d - decimal                            
+    times ('o' - 'd' - 1) dq Error ; nothing here               
+    dq Oct              ; %o - octal                             DONE
     times ('s' - 'o' - 1) dq Error  ; nothing here
     dq String           ; %s - string
     times ('x' - 's' - 1) dq Error
-    dq Hex              ; %x - hex
+    dq Hex              ; %x - hex                               DONE
 
 ascii: db 30h
 numbers_end_9: db 39h
@@ -17,8 +17,7 @@ to_letters: db 7d
 section .data
 to_print_or_not_to_print: db 0
 Message: times 34 db 0
-hui: db 'hui %b %o %x'
-     db 0
+hui: db 'hui %b %o %x %c', 0
 
 
 section .text
@@ -27,6 +26,7 @@ global _start
 
 _start:
         mov rdi, hui
+        mov r8, 'A'
         mov rsi, 16
         mov rdx, 16
         mov rcx, 16
@@ -168,7 +168,7 @@ Print_2_8_16:
         mov rsi, Message
 
         xor rdx, rdx ; use rdx as byte counter
-        xor rbx, rbx ; use rbx as reg to save 0 or zero
+        xor rbx, rbx ; use rbx as reg to save letter
         cmp rdi, 1
         jne .not_bin
         mov rcx, 64d
@@ -204,7 +204,7 @@ Print_2_8_16:
         mov rcx, rdi
         push rax
         xor al, al
-        rol rax, cl
+        rol rax, cl         ; clean al, roll bytes here, mov them to bl, repare rax and print dl in ascii
         mov bl, al
         pop rax
         rol rax, cl
@@ -287,8 +287,38 @@ Binary:
 
 
 Char:
-Decimal:
+        push rax
+        push rsi
+        push rdi
+        push rdx
+        mov rax, [rbp]  ;argument
+        add rbp, 8d
+        mov rsi, Message
+        mov byte [rsi], al
+        mov rdi, 1
+        mov rdx, 1
+        mov rax, 1
+        syscall
+        mov byte [rsi], 0
+        pop rdx
+        pop rdi
+        pop rsi
+        pop rax
+        ret
 
+
+;--------------------------------------------------
+; prints num in 10 count system
+;--------------------------------------------------
+; 
+;--------------------------------------------------
+Decimal:
+        push to chto nado
+
+
+        
+
+;--------------------------------------------------
 
 Oct:
         push rdi
