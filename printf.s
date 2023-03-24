@@ -2,7 +2,7 @@ section .rodata
 jump_table:             ; starts with %b with binary
     dq Binary           ; %b - bin                               DONE
     dq Char             ; %c - Char                              DONE
-    dq Decimal          ; %d - decimal                            
+    dq Decimal          ; %d - decimal                           DONE
     times ('o' - 'd' - 1) dq Error ; nothing here               
     dq Oct              ; %o - octal                             DONE
     times ('s' - 'o' - 1) dq Error  ; nothing here
@@ -16,20 +16,26 @@ to_letters: db 7d
 
 section .data
 to_print_or_not_to_print: db 0
+neg_: db 0
 Message: times 34 db 0
-hui: db 'hui %b %o %x %c', 0
+help_buffer: times 34 db 0
+user_durachok: db "USER_MADE_CRINGE.BIT_HIM"
+user_durachok_len: dq 24d
 
 
 section .text
 
-global _start
+extern strlen
 
-_start:
-        mov rdi, hui
-        mov r8, 'A'
-        mov rsi, 16
-        mov rdx, 16
-        mov rcx, 16
+global MyPrintf
+
+MyPrintf:
+        ;mov rdi, hui
+        ;mov r9, -19
+        ;mov r8, 'A'
+        ;mov rsi, -100
+        ;mov rdx, 16
+        ;mov rcx, 16
         pop r15             ; I don't know how many parametrs I have, but in the top of stack we have ret adr, save it
         ; 7 - ? args already in stack 
         push r9 
@@ -197,7 +203,7 @@ Print_2_8_16:
         jmp .zaloopa
     
     .not_oct:
-        mov rcx, 8d
+        mov rcx, 16d
 
     .zaloopa:
         push rcx
@@ -313,12 +319,93 @@ Char:
 ; 
 ;--------------------------------------------------
 Decimal:
-        push to chto nado
+        push rax
+        push rdx
+        push rcx
+        push rsi
 
+        mov rax, [rbp]
+        add rbp, 8d
 
+        xor rdx, rdx    
+        xor rcx, rcx    ; it's a counter
+        mov rsi, Message
+        mov rbx, 10
+
+        cmp rax, 0
+        jge .set_pos
+        mov byte [neg_], 1
+        neg rax
+        jmp .let_s_go
+    .set_pos:
+        mov byte [neg_], 0
+
+    .let_s_go:
+        xor rdx, rdx
+        div rbx      ; divide. in rax result of dividing, rdx - ostatok
         
+        mov [rsi], dl
+        mov dh, [ascii]
+        add byte [rsi], dh
+        inc rsi
+        inc rcx
+
+        cmp rax, 0
+        jne .let_s_go
+
+        ;----------
+
+        cmp byte [neg_], 0
+        je .it_s_pos
+        mov byte [rsi], '-'
+        inc rsi
+        inc rcx
+
+    .it_s_pos:
+        dec rsi
+        call Reversation_Fault
+
+        pop rsi
+        pop rcx
+        pop rdx
+        pop rax
+        ret
 
 ;--------------------------------------------------
+; Reverses the string and prints it
+;--------------------------------------------------
+; Entry: rsi - the end of the string to reverse
+;        rcx - amount of symbols in the string
+;--------------------------------------------------
+Reversation_Fault:
+        push rdi
+        push rdx
+        push rax
+
+        mov rdi, help_buffer
+        push rcx
+
+    .zaloopa:
+        mov ah, byte [rsi]
+        mov byte [rdi], ah
+        inc rdi
+        dec rsi
+        loop .zaloopa
+
+        pop rdx
+        mov rax, 1
+        mov rsi, help_buffer
+        mov rdi, 1
+        syscall
+        
+
+        pop rax
+        pop rdx
+        pop rdi
+        ret
+
+;--------------------------------------------------
+
 
 Oct:
         push rdi
@@ -326,12 +413,57 @@ Oct:
         call Print_2_8_16
         pop rdi
         ret
+
+;--------------------------------------------------
+; Prints a string
+;--------------------------------------------------
 String:
+        push rdi
+        push rsi
+        push rax
+        push rdx
+
+        mov rdi, [rbp]
+        add rbp, 8d
+        call strlen     ; rax - strlen
+        mov rsi, rdi
+        mov rdi, 1
+        mov rdx, rax
+        mov rax, 1
+        syscall
+
+        pop rdx 
+        pop rax
+        pop rsi
+        pop rdi
+        ret
+
+;--------------------------------------------------
+
+;--------------------------------------------------
+; Returns 
+
+
 Hex:
         push rdi
-        mov rdi, 8
+        mov rdi, 4
         call Print_2_8_16
         pop rdi
         ret
 
 Error:
+        push rax
+        push rdi
+        push rsi
+        push rdx
+
+        mov rax, 1
+        mov rdi, 1
+        mov rsi, user_durachok
+        mov rdx, [user_durachok_len]
+        syscall
+
+        pop rdx
+        pop rsi
+        pop rdi
+        pop rax
